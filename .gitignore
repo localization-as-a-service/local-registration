@@ -130,5 +130,6 @@ dmypy.json
 
 # output folder
 output
+data
 
 calibration.*
