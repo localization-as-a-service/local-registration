@@ -7,7 +7,7 @@ import pyrealsense2 as rs
 from utils.depth_camera import DepthCamera
 
 device_id = 0
-out_dir = "data/metadata"
+out_dir = "data/exp_7/metadata"
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
