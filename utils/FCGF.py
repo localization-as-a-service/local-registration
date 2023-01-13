@@ -11,11 +11,11 @@ def get_features(feature_file, pcd_only=False):
     keypts = open3d.geometry.PointCloud()
     keypts.points = open3d.utility.Vector3dVector(data["keypts"])
     
-    open3d.geometry.estimate_normals(keypts)
+    keypts.estimate_normals(search_param=open3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
     
     if pcd_only:
         return keypts
     scores = data["scores"]
-    features = open3d.registration.Feature()
+    features = open3d.pipelines.registration.Feature()
     features.data = data["features"].T
     return keypts, features, scores

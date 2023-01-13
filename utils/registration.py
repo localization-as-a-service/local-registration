@@ -32,6 +32,18 @@ def ransac_feature_matching(source, target, source_feat, target_feat, n_ransac, 
         ],
         open3d.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999))
     
+
+def icp_refinement(source, target, threshold, trans_init, max_iteration=30, p2p=True):
+    if p2p:
+        estimation_method = open3d.pipelines.registration.TransformationEstimationPointToPoint(False)
+    else:
+        estimation_method = open3d.pipelines.registration.TransformationEstimationPointToPlane()
+        
+    return open3d.pipelines.registration.registration_icp(
+        source, target, threshold, trans_init, estimation_method,
+        open3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=max_iteration)
+    )
+    
     
 def view(source, target, transformation):
     source_temp = copy.deepcopy(source)
