@@ -85,4 +85,4 @@ def start_imu_stream(alpha=0.8):
 
 
 if __name__ == '__main__':
-    start_imu_stream()
+    start_imu_stream(alpha=0.9)
