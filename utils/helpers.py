@@ -20,6 +20,14 @@ def merge_pcds(pcds, voxel_size):
     return global_pcd.voxel_down_sample(voxel_size)
 
 
+def make_pcd(xyz, colors=None):
+    pcd = open3d.geometry.PointCloud()
+    pcd.points = open3d.utility.Vector3dVector(xyz)
+    if colors is not None:
+        pcd.colors = open3d.utility.Vector3dVector(colors)
+    return pcd
+
+
 def rotate_transformation_matrix(t, rx, ry, rz):
     # Convert degrees to radians
     rx, ry, rz = np.radians(rx), np.radians(ry), np.radians(rz)
