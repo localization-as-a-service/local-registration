@@ -68,8 +68,8 @@ def register_frames(dataset_dir, experiment, trial, subject, sequence, voxel_siz
 if __name__ == "__main__":
     VOXEL_SIZE = 0.03
     ROOT_DIR = "data/features"
-    EXPERIMENT = "exp_7"
-    OUT_DIR = "data/trajectories/groundtruth/exp_7"
+    EXPERIMENT = "exp_8"
+    OUT_DIR = "data/trajectories/groundtruth/exp_8"
 
     if not os.path.exists(OUT_DIR): os.makedirs(OUT_DIR)
     

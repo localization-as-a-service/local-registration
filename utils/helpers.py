@@ -54,3 +54,7 @@ def rotate_transformation_matrix(t, rx, ry, rz):
     ])
 
     return np.dot(np.dot(np.dot(t, RZ), RY), RX)
+
+
+def nearest(items, pivot):
+    return min(items, key=lambda x: abs(x - pivot))

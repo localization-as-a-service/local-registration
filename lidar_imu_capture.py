@@ -5,7 +5,8 @@ import cv2
 import numpy as np
 import pandas as pd
 import pyrealsense2 as rs
-import multiprocessing as mp
+
+from threading import Thread
 
 
 def extract_motion_data(timestamp, data):
@@ -17,29 +18,64 @@ def save_data(data, output_file):
     df.to_csv(output_file, index=False)
     
     
-def main(out_dir):
-    camera_pipe = rs.pipeline()
+def imu_stream(out_dir):
     imu_pipe = rs.pipeline()
-    
-    camera_config = rs.config()
     imu_config = rs.config()
+
+    imu_config.enable_stream(rs.stream.accel, rs.format.motion_xyz32f, 200)
+    imu_config.enable_stream(rs.stream.gyro, rs.format.motion_xyz32f, 200)
     
-    camera_config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-    camera_config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-    
-    imu_config.enable_stream(rs.stream.accel, rs.format.motion_xyz32f, 400)
-    imu_config.enable_stream(rs.stream.gyro, rs.format.motion_xyz32f, 400)
-    
-    align = rs.align(rs.stream.color)
-    
-    camera_pipe.start(camera_config)
     imu_pipe.start(imu_config)
-    
-    previous_t = [time.time() * 1000 for _ in range(2)]
     
     accel_data = []
     gyro_data = []
     
+    start_t = time.time()
+    previous_t = time.time() * 1000
+    elapsed_t = 0
+    
+    while True:
+        try:
+            elapsed_t = time.time() - start_t
+            
+            if elapsed_t > 20: break
+            
+            motion_frames: rs.composite_frame = imu_pipe.poll_for_frames()
+
+            if motion_frames:
+                current_t = motion_frames.get_frame_metadata(rs.frame_metadata_value.time_of_arrival)
+                
+                if current_t - previous_t < 1: continue
+                
+                accel_frame = motion_frames[0].as_motion_frame()
+                gyro_frame = motion_frames[1].as_motion_frame()
+                
+                accel_data.append(extract_motion_data(current_t, accel_frame.get_motion_data()))
+                gyro_data.append(extract_motion_data(current_t, gyro_frame.get_motion_data()))
+                
+                print("Number of IMU samples: ", len(accel_data), end="\r")
+                
+        except KeyboardInterrupt:
+            break
+        
+    imu_pipe.stop()
+
+    save_data(accel_data, os.path.join(out_dir, "motion", "accel.csv"))
+    save_data(gyro_data, os.path.join(out_dir, "motion", "gyro.csv"))
+        
+    
+def camera_stream(out_dir):
+    camera_pipe = rs.pipeline()
+    camera_config = rs.config()
+    
+    camera_config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+    camera_config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+
+    align = rs.align(rs.stream.color)
+    
+    camera_pipe.start(camera_config)
+    
+    previous_t = time.time() * 1000
     start_t = time.time()
     elapsed_t = 0
     
@@ -64,12 +100,8 @@ def main(out_dir):
                 depth_image = np.asanyarray(aligned_depth_frame.get_data())
                 color_image = np.asanyarray(aligned_color_frame.get_data())
                 
-                fps = int(1 / (current_t - previous_t[0] + 1) * 1e3)
-                previous_t[0] = current_t
-
-                # depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
-
-                # images = np.hstack((color_image, depth_colormap))
+                fps = int(1 / (current_t - previous_t + 1) * 1e3)
+                previous_t = current_t
 
                 cv2.imwrite(os.path.join(out_dir, "frames", f"frame-{current_t}.color.png"), color_image)
                 cv2.imwrite(os.path.join(out_dir, "frames", f"frame-{current_t}.depth.png"), depth_image)
@@ -84,40 +116,18 @@ def main(out_dir):
                 key = cv2.waitKey(1)
 
                 if key in (27, ord("q")) or cv2.getWindowProperty("Secondary View", cv2.WND_PROP_AUTOSIZE) < 0:
-                    cv2.destroyAllWindows()
                     break
-                
-            motion_frames: rs.composite_frame = imu_pipe.poll_for_frames()
-            if motion_frames:
-                current_t = motion_frames.get_frame_metadata(rs.frame_metadata_value.time_of_arrival)
-                
-                accel_frame = motion_frames[0].as_motion_frame()
-                gyro_frame = motion_frames[1].as_motion_frame()
-                
-                if (not accel_frame and not gyro_frame) or (current_t - previous_t[1] < 1e3 / 400):
-                    continue
-                
-                accel_data.append(extract_motion_data(current_t, accel_frame.get_motion_data()))
-                gyro_data.append(extract_motion_data(current_t, gyro_frame.get_motion_data()))
-                
-                fps = int(1 / (current_t - previous_t[1] + 1) * 1e3)
-                previous_t[1] = current_t
-                
-                print("Number of accel samples: ", len(accel_data), end="\r")
                 
         except KeyboardInterrupt:
             break
-        
-    save_data(accel_data, os.path.join(out_dir, "motion", "accel.csv"))
-    save_data(gyro_data, os.path.join(out_dir, "motion", "gyro.csv"))
-        
-    camera_pipe.stop()
-    imu_pipe.stop()
-        
 
+    camera_pipe.stop()
+    cv2.destroyAllWindows()
+                    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Intel Lidar L515")
+    parser.add_argument("--mode", default="cam", type=str)
     parser.add_argument("--experiment", default=0, type=int)
     parser.add_argument("--trial", default=0, type=int)
     parser.add_argument("--subject", default=0, type=int)
@@ -125,14 +135,23 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     out_dir = f"data/raw_data/exp_{args.experiment}/trial_{args.trial}/subject-{args.subject}/{args.sequence:02d}"
-
-    if not os.path.exists(out_dir):
-        os.makedirs(os.path.join(out_dir, "frames"))
-        os.makedirs(os.path.join(out_dir, "motion"))
-
-    # if args.mode == "depth":
-    #     start_depth_camera(os.path.join(output_path, "frames"))
-    # else:
-    #     start_imu_stream(os.path.join(output_path, "motion"))
     
-    main(out_dir)
+    if args.mode == "cam":
+        if not os.path.exists(os.path.join(out_dir, "frames")):
+            os.makedirs(os.path.join(out_dir, "frames"))
+            
+        camera_stream(out_dir)
+    elif args.mode == "imu":
+        if not os.path.exists(os.path.join(out_dir, "motion")):
+            os.makedirs(os.path.join(out_dir, "motion"))
+
+        imu_stream(out_dir)
+    else:
+        if not os.path.exists(os.path.join(out_dir, "frames")):
+            os.makedirs(os.path.join(out_dir, "frames"))
+        
+        if not os.path.exists(os.path.join(out_dir, "motion")):
+            os.makedirs(os.path.join(out_dir, "motion"))
+
+        Thread(target=imu_stream, args=(out_dir,)).start()
+        Thread(target=camera_stream, args=(out_dir,)).start()

@@ -16,15 +16,21 @@ from utils.config import Config
 def main(config: Config, args: argparse.Namespace):
     motion_dir = config.get_motion_dir()
     # load imu data
-    accel_df = pd.read_csv(os.path.join(motion_dir, "accelerometer"))
-    gyro_df = pd.read_csv(os.path.join(motion_dir, "gyroscope"))
+    # accel_df = pd.read_csv(os.path.join(motion_dir, "accelerometer"))
+    # gyro_df = pd.read_csv(os.path.join(motion_dir, "gyroscope"))
+    accel_df = pd.read_csv(os.path.join(motion_dir, "accel.csv"))
+    gyro_df = pd.read_csv(os.path.join(motion_dir, "gyro.csv"))
     # remove duplicates
     accel_df.drop_duplicates("timestamp", inplace=True)
     gyro_df.drop_duplicates("timestamp", inplace=True)
+    # frame rate of imu data
+    frame_rate = accel_df.shape[0] / (accel_df.timestamp.values[-1] - accel_df.timestamp.values[0]) * 1000
+    print("Frame rate of IMU data: ", frame_rate)
+    print("Window size: ", int(args.window * frame_rate))
     # combine accel and gyro data
     imu_df = pd.merge(accel_df, gyro_df, on="timestamp", suffixes=("a", "g"))
     # remove gravity
-    accel_mavg = imu_df[["xa", "ya", "za"]].rolling(window=args.window).mean()
+    accel_mavg = imu_df[["xa", "ya", "za"]].rolling(window=int(args.window * frame_rate)).mean()
     imu_df[["xa", "ya", "za"]] = imu_df[["xa", "ya", "za"]] - accel_mavg
     # remove nan values due to rolling mean
     imu_df.dropna(inplace=True)
@@ -67,16 +73,23 @@ def main(config: Config, args: argparse.Namespace):
     pcd.paint_uniform_color([1, 0, 0])
     
     # load ground truth trajectory
+    sequence_ts = fread.get_timstamps_from_images(config.get_sequence_dir(), ext=".depth.png")
+    start_t = helpers.nearest(sequence_ts, imu_df.timestamp.values[0])
+    start_index = np.where(sequence_ts == start_t)[0][0]
     pose_file = os.path.join(config.get_groundtruth_dir(), f"{config.get_file_name()}.pose.npz")
     trajectory_t = np.load(pose_file)["trajectory_t"]
-    pcd_gt = helpers.make_pcd(trajectory_t[:, :3, 3])
+    pcd_gt = helpers.make_pcd(trajectory_t[start_index:, :3, 3])
     pcd_gt.paint_uniform_color([0, 1, 0])
+    
+    print("IMU Distance: ", np.linalg.norm(xyz[-1] - xyz[0]))
+    print("GT Distance: ", np.linalg.norm(trajectory_t[-1, :3, 3] - trajectory_t[start_index, :3, 3]))
+    
     
     open3d.visualization.draw_geometries([pcd_gt, pcd])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--window", type=int, default=400)
+    parser.add_argument("--window", type=float, default=400)
     parser.add_argument("--sequence", type=int, default=2)
     
     args = parser.parse_args()
@@ -84,7 +97,7 @@ if __name__ == "__main__":
     config = Config(
         feature_dir="data/features",
         sequence_dir="data/raw_data",
-        experiment="exp_7",
+        experiment="exp_8",
         trial="trial_1",
         subject="subject-1",
         sequence=f"{args.sequence:02d}",

@@ -219,7 +219,7 @@ if __name__ == "__main__":
     # convert_to_point_clouds("data/raw_data/exp_5/trial_3", subject_id=1, device_id=3)
     # convert_to_point_clouds("data/raw_data/exp_5/trial_3", subject_id=2, device_id=4)
     # convert_to_point_clouds("data/raw_data/exp_5/trial_4", subject_id=1, device_id=3)
-    convert_to_point_clouds_only_secondary("data/raw_data/exp_7", subject_id=1, device_id=0)
+    convert_to_point_clouds_only_secondary("data/raw_data/exp_8", subject_id=1, device_id=0)
     # make_rotating_global_pcds("data/raw_data", "exp_2", "trial_1")
     # create_rotating_sequences("data/raw_data", "exp_2", "trial_1", subject_id=1, device_id=3)
     
