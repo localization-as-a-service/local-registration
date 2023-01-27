@@ -42,40 +42,43 @@ def start_imu_stream(alpha=0.8):
             accel_frame = frames[0].as_motion_frame()
             gyro_frame = frames[1].as_motion_frame()
 
-            if reset_counter == 1600:
-                displacement = [0, 0, 0]
-                velocity = [0, 0, 0]
-                reset_counter = 2000
-            else:
-                reset_counter += 1
+            # if reset_counter == 1600:
+            #     displacement = [0, 0, 0]
+            #     velocity = [0, 0, 0]
+            #     reset_counter = 2000
+            # else:
+            #     reset_counter += 1
 
-            if not accel_frame and not gyro_frame:
-                continue
+            # if not accel_frame and not gyro_frame:
+            #     continue
 
-            dt = (current_t - last_t) / 1e3
-            dt = 1 / 100 if dt == 0 else dt
+            # dt = (current_t - last_t) / 1e3
+            # dt = 1 / 100 if dt == 0 else dt
 
             acceleration = extract_motion_data(current_t, accel_frame.get_motion_data())
 
-            for i in range(3):
-                gravity[i] = alpha * gravity[i] + (1 - alpha) * acceleration[1 + i]
-                acceleration[i + 1] = acceleration[i + 1] - gravity[i]
+            # for i in range(3):
+            #     gravity[i] = alpha * gravity[i] + (1 - alpha) * acceleration[1 + i]
+            #     acceleration[i + 1] = acceleration[i + 1] - gravity[i]
 
-                velocity[i] = velocity[i] + acceleration[i + 1] * dt
-                # Update the displacement
-                displacement[i] = displacement[i] + (velocity[i] * dt) + (0.5 * acceleration[i + 1] * dt * dt)
+            #     velocity[i] = velocity[i] + acceleration[i + 1] * dt
+            #     # Update the displacement
+            #     displacement[i] = displacement[i] + (velocity[i] * dt) + (0.5 * acceleration[i + 1] * dt * dt)
 
-            gyro_motion = extract_motion_data(current_t, gyro_frame.get_motion_data())
+            # gyro_motion = extract_motion_data(current_t, gyro_frame.get_motion_data())
 
             accel_data.append(acceleration)
-            gyro_data.append(gyro_motion)
+            # gyro_data.append(gyro_motion)
 
             if current_t - last_t == 0:
                 continue
 
+            # display = f"Acceleration: {acceleration[1]:+.3f} {acceleration[2]:+.3f} {acceleration[3]:+.3f}\t"
+            # display += f"Displacement: {displacement[0]:+.3f} {displacement[1]:+.3f} {displacement[2]:+.3f}\t"
+            # display += f"dt={dt:.3f}s"
+            
             display = f"Acceleration: {acceleration[1]:+.3f} {acceleration[2]:+.3f} {acceleration[3]:+.3f}\t"
-            display += f"Displacement: {displacement[0]:+.3f} {displacement[1]:+.3f} {displacement[2]:+.3f}\t"
-            display += f"dt={dt:.3f}s"
+            display += f"Magnitude: {np.linalg.norm(acceleration[1:]):.3f}\t"
 
             print(display, end="\r")
             last_t = current_t
