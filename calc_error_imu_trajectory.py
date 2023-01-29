@@ -199,6 +199,74 @@ def orientation_tracking_based_approach(config: Config, window_size: int = 4):
         
     result = calc_error(imu_df, config)
     result.to_csv(os.path.join(config.get_output_file(f"{config.get_file_name()}.csv")), index=False)
+    
+    
+def orientation_tracking_with_filter_based_estimation(config: Config, window_size: int = 4):
+    imu_df, frame_rate = load_files(config)
+    win_len = int(frame_rate * window_size)
+    
+    gravity = imu_df.iloc[:win_len, [1, 2, 3]].mean().values
+    
+    # compute dt in seconds
+    imu_df.loc[:, "dt"] = np.concatenate([[0], (imu_df.timestamp.values[1:] - imu_df.timestamp.values[:-1]) / 1000])
+    # remove first row as the dt is 0
+    imu_df = imu_df.iloc[1:]
+    # reset index in pandas data frame
+    imu_df.reset_index(drop=True, inplace=True)
+
+    # filter out gravity
+    rotation_matrix = np.identity(4)
+
+    velocity = [0, 0, 0]
+
+    for i in tqdm.tqdm(range(1, len(imu_df))):
+        v = imu_df.iloc[i].values
+        da = np.degrees([v[j + 4] * v[7] for j in range(3)])
+        
+        acceleration = imu_df.iloc[i, [1, 2, 3]].values
+        gravity_rotated = np.dot(rotation_matrix, np.array([*gravity, 1]))
+        acceleration = acceleration - gravity_rotated[:3]
+        
+        imu_df.iloc[i, 1] = acceleration[0]
+        imu_df.iloc[i, 2] = acceleration[1]
+        imu_df.iloc[i, 3] = acceleration[2]
+
+    # moving average filter
+    accel_mavg = imu_df[["xa", "ya", "za"]].rolling(window=win_len).mean()
+    accel_mavg.fillna(0, inplace=True)
+    imu_df[["xa", "ya", "za"]] = imu_df[["xa", "ya", "za"]] - accel_mavg
+    
+    # remove first second's data
+    imu_df = imu_df.iloc[400:]
+
+    # Fill 0 for displacement, angles, and coordinates
+    imu_df.loc[:, "x"] = np.zeros(len(imu_df))
+    imu_df.loc[:, "y"] = np.zeros(len(imu_df))
+    imu_df.loc[:, "z"] = np.zeros(len(imu_df))
+        
+    # calculate displacement and rotation
+    rotation_matrix = np.identity(4)
+
+    velocity = [0, 0, 0]
+
+    for i in tqdm.tqdm(range(1, len(imu_df))):
+        v = imu_df.iloc[i].values
+        dt = v[7]
+        # current displacement and rotation
+        da = np.degrees([v[j + 4] * dt for j in range(3)])
+        dd = [(velocity[j] * dt) + (0.5 * v[j + 1] * dt * dt) for j in range(3)]
+        
+        d = np.dot(rotation_matrix, np.array([*dd, 1]))
+        
+        imu_df.iloc[i, 8] = imu_df.iloc[i - 1, 8] + d[0]
+        imu_df.iloc[i, 9] = imu_df.iloc[i - 1, 9] + d[1]
+        imu_df.iloc[i, 10] = imu_df.iloc[i - 1, 10] + d[2]
+        
+        rotation_matrix = helpers.rotate_transformation_matrix(rotation_matrix, da[0], da[1], da[2])
+        velocity = [velocity[j] + v[j + 1] * dt for j in range(3)]
+    
+    result = calc_error(imu_df, config)
+    result.to_csv(os.path.join(config.get_output_file(f"{config.get_file_name()}.csv")), index=False)
 
 
 if __name__ == "__main__":
@@ -215,7 +283,7 @@ if __name__ == "__main__":
         subject="subject-1",
         sequence="00",
         groundtruth_dir="data/trajectories/groundtruth",
-        output_dir="data/results/low_pass_filter_alpha_0.9",
+        output_dir="data/results/orientation_tracking_and_moving_average_filter",
     )
     
     for trial in os.listdir(os.path.join(config.sequence_dir, config.experiment)):
@@ -230,7 +298,7 @@ if __name__ == "__main__":
                 config.trial = trial
                 config.sequence = sequence
                 
-                low_pass_filter_based_estimation(config, alpha=0.9, skip_first_seconds=4)
+                # low_pass_filter_based_estimation(config, alpha=0.9, skip_first_seconds=4)
                 # moving_average_based_estimation(config, window_size=args.window)
-                # orientation_tracking_based_approach(config, window_size=args.window)
+                orientation_tracking_with_filter_based_estimation(config, window_size=args.window)
     
