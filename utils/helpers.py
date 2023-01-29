@@ -20,6 +20,15 @@ def merge_pcds(pcds, voxel_size):
     return global_pcd.voxel_down_sample(voxel_size)
 
 
+def merge_transformations(start_t: int, end_t: int, local_t: np.array):
+    local_ts = np.identity(4)
+
+    for t in range(start_t, end_t):
+        local_ts = np.dot(local_t[t + 1], local_ts)
+        
+    return local_ts
+
+
 def make_pcd(xyz, colors=None):
     pcd = open3d.geometry.PointCloud()
     pcd.points = open3d.utility.Vector3dVector(xyz)
