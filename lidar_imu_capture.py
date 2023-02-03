@@ -38,7 +38,7 @@ def imu_stream(out_dir):
         try:
             elapsed_t = time.time() - start_t
             
-            if elapsed_t > 20: break
+            if elapsed_t > 25: break
             
             motion_frames: rs.composite_frame = imu_pipe.poll_for_frames()
 
@@ -83,7 +83,7 @@ def camera_stream(out_dir):
         try:
             elapsed_t = time.time() - start_t
             
-            if elapsed_t > 20:
+            if elapsed_t > 25:
                 break
             
             camera_frames: rs.composite_frame = camera_pipe.poll_for_frames()
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     parser.add_argument("--sequence", default=0, type=int)
     args = parser.parse_args()
 
-    out_dir = f"data/raw_data/exp_{args.experiment}/trial_{args.trial}/subject-{args.subject}/{args.sequence:02d}"
+    out_dir = f"data/raw_data/exp_{args.experiment}/trial_{args.trial}/secondary/subject-{args.subject}/{args.sequence:02d}"
     
     if args.mode == "cam":
         if not os.path.exists(os.path.join(out_dir, "frames")):

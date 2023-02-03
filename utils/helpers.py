@@ -67,3 +67,11 @@ def rotate_transformation_matrix(t, rx, ry, rz):
 
 def nearest(items, pivot):
     return min(items, key=lambda x: abs(x - pivot))
+
+
+def sample_timestamps(sequence_ts, frame_rates):
+    sequence_ets = (sequence_ts - sequence_ts[0]) / 1e3
+    frame_ids = sequence_ets * frame_rates
+    frame_ids = frame_ids.astype(np.int)
+    to_drop = np.where(frame_ids[1:] - frame_ids[:-1] == 0)[0]
+    return np.delete(sequence_ts, to_drop)

@@ -23,10 +23,11 @@ class ImageSaver(mp.Process):
         while True:
             try:
                 image, file_name = self.queue.get()
+                if image is None:
+                    break
                 self.save_image(image, file_name)
             except KeyboardInterrupt:
                 break
-        self.join()
 
 
 def main(args, queue: mp.Queue):
@@ -95,6 +96,7 @@ def main(args, queue: mp.Queue):
 
             if key & 0xFF == ord('q') or key == 27:
                 cv2.destroyAllWindows()
+                queue.put_nowait((None, None))
                 break
 
     finally:
@@ -119,7 +121,5 @@ if __name__ == "__main__":
 
     main(args, queue)
     
-    image_saver.join()
-
 
 
