@@ -86,10 +86,13 @@ def visualize(dataset_dir, experiment, trial, subject, sequence, voxel_size, out
     for t in tqdm.trange(num_frames):
         feature_file = os.path.join(sequence_dir, f"{sequence_ts[t]}.secondary.npz")
         pcd = FCGF.get_features(feature_file, pcd_only=True)
+        pcd = helpers.remove_statistical_outliers(pcd)
         pcd.transform(trajectory_t[t])
         local_pcds.append(pcd)
         
-    open3d.visualization.draw_geometries(local_pcds)
+    trajectory = helpers.merge_pcds(local_pcds, voxel_size)
+        
+    open3d.visualization.draw_geometries([trajectory])
 
 if __name__ == "__main__":
     VOXEL_SIZE = 0.03
@@ -106,3 +109,8 @@ if __name__ == "__main__":
             for sequence in os.listdir(os.path.join(ROOT_DIR, EXPERIMENT, trial, str(VOXEL_SIZE), subject)):
                 print(f"Processing: {EXPERIMENT} >> {trial} >> {subject} >> {sequence}")
                 visualize(ROOT_DIR, EXPERIMENT, trial, subject, sequence, VOXEL_SIZE, OUT_DIR)    
+                correct = input("Correct? (y/n): ") == "y"
+                data.append([EXPERIMENT, trial, subject, sequence, correct])
+                
+    df = pd.DataFrame(data, columns=["experiment", "trial", "subject", "sequence", "correct"])
+    df.to_csv(os.path.join(OUT_DIR, "summary.csv"), index=False)
