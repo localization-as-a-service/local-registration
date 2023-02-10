@@ -65,11 +65,37 @@ def register_frames(dataset_dir, experiment, trial, subject, sequence, voxel_siz
     print("     :: Done.")
     
 
+def visualize(dataset_dir, experiment, trial, subject, sequence, voxel_size, out_dir):
+    sequence_dir = os.path.join(dataset_dir, experiment, trial, str(voxel_size), subject, sequence)
+    sequence_ts = fread.get_timstamps(sequence_dir, ext=".secondary.npz")
+    num_frames = len(sequence_ts)
+    
+    file_name = f"{experiment}__{trial}__{subject}__{sequence}"
+    
+    if not os.path.exists(os.path.join(out_dir, f"{file_name}.pose.npz")):
+        print("     :: No pose information found.")
+        return
+    
+    pose = np.load(os.path.join(out_dir, f"{file_name}.pose.npz"))
+    trajectory_t = pose["trajectory_t"]
+    
+    print("     :: Number of frames: {}".format(num_frames))
+    
+    local_pcds = []
+    
+    for t in tqdm.trange(num_frames):
+        feature_file = os.path.join(sequence_dir, f"{sequence_ts[t]}.secondary.npz")
+        pcd = FCGF.get_features(feature_file, pcd_only=True)
+        pcd.transform(trajectory_t[t])
+        local_pcds.append(pcd)
+        
+    open3d.visualization.draw_geometries(local_pcds)
+
 if __name__ == "__main__":
     VOXEL_SIZE = 0.03
     ROOT_DIR = "data/features"
-    EXPERIMENT = "exp_8"
-    OUT_DIR = "data/trajectories/groundtruth/exp_8"
+    EXPERIMENT = "exp_10"
+    OUT_DIR = "data/trajectories/groundtruth/exp_10"
 
     if not os.path.exists(OUT_DIR): os.makedirs(OUT_DIR)
     
@@ -79,4 +105,4 @@ if __name__ == "__main__":
         for subject in os.listdir(os.path.join(ROOT_DIR, EXPERIMENT, trial, str(VOXEL_SIZE))):
             for sequence in os.listdir(os.path.join(ROOT_DIR, EXPERIMENT, trial, str(VOXEL_SIZE), subject)):
                 print(f"Processing: {EXPERIMENT} >> {trial} >> {subject} >> {sequence}")
-                register_frames(ROOT_DIR, EXPERIMENT, trial, subject, sequence, VOXEL_SIZE, OUT_DIR)    
+                visualize(ROOT_DIR, EXPERIMENT, trial, subject, sequence, VOXEL_SIZE, OUT_DIR)    
