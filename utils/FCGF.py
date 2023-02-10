@@ -15,6 +15,7 @@ def get_features(feature_file, pcd_only=False):
     
     if pcd_only:
         return keypts
+    
     scores = data["scores"]
     features = open3d.pipelines.registration.Feature()
     features.data = data["features"].T

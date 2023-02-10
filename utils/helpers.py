@@ -75,3 +75,8 @@ def sample_timestamps(sequence_ts, frame_rates):
     frame_ids = frame_ids.astype(np.int)
     to_drop = np.where(frame_ids[1:] - frame_ids[:-1] == 0)[0]
     return np.delete(sequence_ts, to_drop)
+
+
+def remove_statistical_outliers(point_cloud, nb_neighbors=20, std_ratio=1.0):
+    _, ind = point_cloud.remove_statistical_outlier(nb_neighbors=nb_neighbors, std_ratio=std_ratio)
+    return point_cloud.select_by_index(ind)
