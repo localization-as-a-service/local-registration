@@ -1,5 +1,7 @@
 import open3d
 import copy
+from scipy.signal import argrelmin
+import numpy as np
 
 
 def describe(source, target, result, end="\n"):
@@ -52,3 +54,8 @@ def view(source, target, transformation):
     target_temp.paint_uniform_color([0, 0.651, 0.929])
     source_temp.transform(transformation)
     open3d.visualization.draw_geometries([source_temp, target_temp])
+    
+    
+def find_cutoffs(std_values, target_fps, min_std, threshold=0.5):
+    cutoffs = argrelmin(std_values, order=target_fps // 2)[0]
+    return cutoffs[np.where(np.abs(std_values[cutoffs] - min_std) < threshold)[0]]
