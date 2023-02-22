@@ -21,10 +21,6 @@ def main(config: Config):
     
     features_dir = config.get_feature_dir()
     sequence_ts = fread.get_timstamps(features_dir, ext=".secondary.npz")
-    
-    elapsed_times = (sequence_ts - sequence_ts[0]) / 1e3
-    sequence_ts = sequence_ts[np.where(elapsed_times > 4, 1, 0) == 1]
-
     num_frames = len(sequence_ts)
 
     print(f"-> Loading {num_frames} point clouds...")
@@ -72,7 +68,4 @@ if __name__ == "__main__":
                 config.sequence = sequence
                 print(f"Processing: {config.experiment} >> {config.trial} >> {config.subject} >> {config.sequence}")
                 main(config)
-    
-    main(config)
-    
     

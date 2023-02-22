@@ -2,6 +2,8 @@ import open3d
 import numpy as np
 import os
 
+from scipy.spatial.transform import Rotation as R
+
 
 def downsample(pcd, voxel_size):
     return pcd.voxel_down_sample(voxel_size)
@@ -80,3 +82,30 @@ def sample_timestamps(sequence_ts, frame_rates):
 def remove_statistical_outliers(point_cloud, nb_neighbors=20, std_ratio=1.0):
     _, ind = point_cloud.remove_statistical_outlier(nb_neighbors=nb_neighbors, std_ratio=std_ratio)
     return point_cloud.select_by_index(ind)
+
+
+def rotation(transformation):
+    rm = transformation[:3, :3].tolist()
+    return R.from_matrix(rm).as_euler('xzy', degrees=True)
+
+
+def translation(t):
+    return np.array([t[0][3], t[1][3], t[2][3]])
+
+
+def calc_error(T1, T2):
+    e1 = np.mean(np.abs(rotation(T1) - rotation(T2)))
+    e2 = np.mean(np.abs(translation(T1) - translation(T2)))
+    return e1, e2
+
+
+def check(T1, T2, max_r=5, max_t=1):
+    er, et = calc_error(T1, T2)
+    return er < max_r and et < max_t
+
+
+def inv_transform(T):
+    T_inv = np.identity(4)
+    T_inv[:3, :3] = T[:3, :3].T
+    T_inv[:3, 3] = -np.dot(T[:3, :3].T, T[:3, 3])
+    return T_inv

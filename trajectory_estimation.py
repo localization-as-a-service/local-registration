@@ -23,13 +23,12 @@ def estimate_trajectory(config: Config):
     feature_dir = config.get_feature_dir()
 
     sequence_ts = fread.get_timstamps(feature_dir, ext=".secondary.npz")
-    sequence_ts = helpers.sample_timestamps(sequence_ts, config.target_fps)
     num_frames = len(sequence_ts)
     
     if os.path.exists(config.get_output_file(config.get_file_name() + ".npz")):
         return
     
-    print("     :: Calculating standard deviation of frames.")
+    print(f"     :: Calculating standard deviation of {num_frames} frames.")
     
     std_values = []
 
@@ -105,6 +104,8 @@ def estimate_trajectory(config: Config):
 
     cutoffs = [c for c in cutoffs if c[0] < c[1]]
     
+    print(f"    :: Cuttoffs: {cutoffs}")
+    
     print("     :: Global registration & verification.")
     
     global_t = [np.identity(4) for _ in range(num_frames)]
@@ -115,6 +116,7 @@ def estimate_trajectory(config: Config):
         global_target_t = []
         found_correct_global = False
         found_correct_global_at = -1
+        
 
         for t in tqdm.trange(len(global_inds)):
             if found_correct_global:
@@ -181,11 +183,11 @@ if __name__ == "__main__":
         subject="subject-1",
         sequence="01",
         groundtruth_dir="data/trajectories/groundtruth",
+        voxel_size=0.03,
+        min_std=0.5,
+        target_fps=20,
+        cutoff_margin=5
     )
-    
-    config.voxel_size=0.03
-    config.target_fps=20
-    config.min_std=0.5
     
     for trial in os.listdir(os.path.join(config.feature_dir, config.experiment)):
         config.trial = trial
