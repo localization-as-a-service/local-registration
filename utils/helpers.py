@@ -80,3 +80,10 @@ def sample_timestamps(sequence_ts, frame_rates):
 def remove_statistical_outliers(point_cloud, nb_neighbors=20, std_ratio=1.0):
     _, ind = point_cloud.remove_statistical_outlier(nb_neighbors=nb_neighbors, std_ratio=std_ratio)
     return point_cloud.select_by_index(ind)
+
+
+def inv_transform(T):
+    T_inv = np.identity(4)
+    T_inv[:3, :3] = T[:3, :3].T
+    T_inv[:3, 3] = -np.dot(T[:3, :3].T, T[:3, 3])
+    return T_inv

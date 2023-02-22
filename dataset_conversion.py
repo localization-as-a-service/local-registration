@@ -19,7 +19,7 @@ def nearest(items, pivot):
     return min(items, key=lambda x: abs(x - pivot))
 
 
-def convert_to_point_clouds(dataset_dir, subject_id=1, device_id=3):
+def convert_to_point_clouds(dataset_dir, subject_id=1, device_id=3, aligned=True):
     """
     Go through the dataset structure and convert all the depth images to point clouds
 
@@ -39,9 +39,9 @@ def convert_to_point_clouds(dataset_dir, subject_id=1, device_id=3):
     # Load pre-computed camera intrinsic parameters
     # Global cameras
     # -aligned
-    device_0 = DepthCamera("device-0", os.path.join(dataset_dir, "../metadata/device-0.json"))
-    device_1 = DepthCamera("device-1", os.path.join(dataset_dir, "../metadata/device-1.json"))
-    device_2 = DepthCamera("device-2", os.path.join(dataset_dir, "../metadata/device-2.json"))
+    device_0 = DepthCamera("device-0", os.path.join(dataset_dir, f"../metadata/device-0{'-aligned' if aligned else ''}.json"))
+    device_1 = DepthCamera("device-1", os.path.join(dataset_dir, f"../metadata/device-1{'-aligned' if aligned else ''}.json"))
+    device_2 = DepthCamera("device-2", os.path.join(dataset_dir, f"../metadata/device-2{'-aligned' if aligned else ''}.json"))
     # Secondary camera
     device_3 = DepthCamera("device-3", os.path.join(dataset_dir, f"../metadata/device-{device_id}-aligned.json"))
 
@@ -73,10 +73,10 @@ def convert_to_point_clouds(dataset_dir, subject_id=1, device_id=3):
             pcd_g2.transform(pose_device_2)
             
             global_pcd = pcd_g0 + pcd_g1 + pcd_g2
-            global_pcd.voxel_down_sample(voxel_size=0.01)
+            global_pcd.voxel_down_sample(voxel_size=0.025)
             
             secondary_pcd = device_3.depth_to_point_cloud(os.path.join(seq_dir, f"frame-{seq_t}.depth.png"))
-            secondary_pcd.voxel_down_sample(voxel_size=0.01)
+            secondary_pcd.voxel_down_sample(voxel_size=0.025)
             
             global_pcd = helpers.remove_statistical_outliers(global_pcd)
             secondary_pcd = helpers.remove_statistical_outliers(secondary_pcd)
@@ -219,11 +219,8 @@ def make_rotating_global_pcds(dataset_dir, experiment, trial, device_id=0):
     
         
 if __name__ == "__main__":
-    convert_to_point_clouds("data/raw_data/exp_10/trial_1", subject_id=1, device_id=3)
-    # convert_to_point_clouds("data/raw_data/exp_10/trial_2", subject_id=1, device_id=3)
-    # convert_to_point_clouds("data/raw_data/exp_10/trial_3", subject_id=1, device_id=3)
-    # convert_to_point_clouds("data/raw_data/exp_5/trial_3", subject_id=2, device_id=4)
-    # convert_to_point_clouds("data/raw_data/exp_5/trial_4", subject_id=1, device_id=3)
+    convert_to_point_clouds("data/raw_data/exp_10/trial_3", subject_id=1, device_id=3, aligned=False)
+    
     # convert_to_point_clouds_only_secondary("data/raw_data/exp_8", subject_id=1, device_id=0)
     # make_rotating_global_pcds("data/raw_data", "exp_2", "trial_1")
     # create_rotating_sequences("data/raw_data", "exp_2", "trial_1", subject_id=1, device_id=3)

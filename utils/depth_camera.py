@@ -43,17 +43,31 @@ class DepthCamera:
         
         depth_image = self.read_depth_image(depth_file)
         
-        points = []
-        for v in range(0, depth_image.height):
-            for u in range(0, depth_image.width):
-                z = depth_image.getpixel((u,v)) / self.depth_scale
-                if z == 0: 
-                    continue
-                x = (u - cx) * z / fx
-                y = (v - cy) * z / fy
-                points.append([x, y, z])
+        # points = []
+        # for v in range(0, depth_image.height):
+        #     for u in range(0, depth_image.width):
+        #         z = depth_image.getpixel((u,v)) / self.depth_scale
+        #         if z == 0: 
+        #             continue
+        #         x = (u - cx) * z / fx
+        #         y = (v - cy) * z / fy
+        #         points.append([x, y, z])
                 
+        # xpcd = open3d.geometry.PointCloud()
+        # xpcd.points = open3d.utility.Vector3dVector(points)
+        
+        z = np.array(depth_image) / self.depth_scale
+
+        x, y = np.meshgrid(np.arange(0, z.shape[1]), np.arange(0, z.shape[0]))
+        x = (x - cx) * z / fx
+        y = (y - cy) * z / fy
+
+        xyz = np.stack([x, y, z], axis=2)
+        xyz = xyz[z > 0]
+        # xyz = xyz.reshape(-1, 3).astype(np.float16)
+        xyz = np.reshape(xyz, (-1, 3))
+        
         xpcd = open3d.geometry.PointCloud()
-        xpcd.points = open3d.utility.Vector3dVector(points)
+        xpcd.points = open3d.utility.Vector3dVector(xyz)
         
         return xpcd
