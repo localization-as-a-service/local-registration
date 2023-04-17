@@ -73,10 +73,10 @@ def convert_to_point_clouds(dataset_dir, subject_id=1, device_id=3, aligned=True
             pcd_g2.transform(pose_device_2)
             
             global_pcd = pcd_g0 + pcd_g1 + pcd_g2
-            global_pcd.voxel_down_sample(voxel_size=0.025)
+            global_pcd.voxel_down_sample(voxel_size=0.01)
             
             secondary_pcd = device_3.depth_to_point_cloud(os.path.join(seq_dir, f"frame-{seq_t}.depth.png"))
-            secondary_pcd.voxel_down_sample(voxel_size=0.025)
+            secondary_pcd.voxel_down_sample(voxel_size=0.01)
             
             global_pcd = helpers.remove_statistical_outliers(global_pcd)
             secondary_pcd = helpers.remove_statistical_outliers(secondary_pcd)
@@ -104,6 +104,11 @@ def convert_to_point_clouds_only_secondary(dataset_dir, subject_id=1, device_id=
         if not trial.startswith("trial"):
             continue
         
+        print(trial)
+        if int(trial[-1]) != 4:
+            continue
+        
+        
         subject = f"subject-{subject_id}"
         
         for seq_id in os.listdir(os.path.join(dataset_dir, trial, subject)):
@@ -116,6 +121,9 @@ def convert_to_point_clouds_only_secondary(dataset_dir, subject_id=1, device_id=
             seq_ts = get_timstamps(seq_dir)
             
             for seq_t in tqdm.tqdm(seq_ts):
+                if os.path.exists(os.path.join(seq_out_dir, f"{seq_t}.secondary.pcd")):
+                    continue
+                
                 pcd = device.depth_to_point_cloud(os.path.join(seq_dir, f"frame-{seq_t}.depth.png"))
                 open3d.io.write_point_cloud(os.path.join(seq_out_dir, f"{seq_t}.secondary.pcd"), pcd)
                     
@@ -219,7 +227,7 @@ def make_rotating_global_pcds(dataset_dir, experiment, trial, device_id=0):
     
         
 if __name__ == "__main__":
-    convert_to_point_clouds("data/raw_data/exp_10/trial_3", subject_id=1, device_id=3, aligned=False)
+    convert_to_point_clouds("data/raw_data/exp_11/trial_3", subject_id=1, device_id=3, aligned=False)
     
     # convert_to_point_clouds_only_secondary("data/raw_data/exp_8", subject_id=1, device_id=0)
     # make_rotating_global_pcds("data/raw_data", "exp_2", "trial_1")

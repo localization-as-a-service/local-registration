@@ -212,8 +212,8 @@ def seperate_poses(dataset_dir, experiment, trial, subject, sequence, voxel_size
 if __name__ == "__main__":
     VOXEL_SIZE = 0.03
     ROOT_DIR = "data/features"
-    EXPERIMENT = "exp_10"
-    OUT_DIR = "data/trajectories/groundtruth/exp_10"
+    EXPERIMENT = "exp_11"
+    OUT_DIR = "data/trajectories/groundtruth/exp_11"
 
     if not os.path.exists(OUT_DIR): os.makedirs(OUT_DIR)
     
@@ -221,4 +221,4 @@ if __name__ == "__main__":
         for subject in os.listdir(os.path.join(ROOT_DIR, EXPERIMENT, trial, str(VOXEL_SIZE))):
             for sequence in os.listdir(os.path.join(ROOT_DIR, EXPERIMENT, trial, str(VOXEL_SIZE), subject)):
                 print(f"Processing: {EXPERIMENT} >> {trial} >> {subject} >> {sequence}")
-                seperate_poses(ROOT_DIR, EXPERIMENT, trial, subject, sequence, VOXEL_SIZE, OUT_DIR)    
+                register_frames(ROOT_DIR, EXPERIMENT, trial, subject, sequence, VOXEL_SIZE, OUT_DIR)    

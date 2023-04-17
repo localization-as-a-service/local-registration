@@ -84,7 +84,6 @@ def main(config: Config, args: argparse.Namespace):
     print("IMU Distance: ", np.linalg.norm(xyz[-1] - xyz[0]))
     print("GT Distance: ", np.linalg.norm(trajectory_t[-1, :3, 3] - trajectory_t[start_index, :3, 3]))
     
-    
     open3d.visualization.draw_geometries([pcd_gt, pcd])
 
 if __name__ == "__main__":

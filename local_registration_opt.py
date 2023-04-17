@@ -57,21 +57,23 @@ def m1(config: Config):
     imu_df.loc[:, "zg"] = gaussian_filter1d(imu_df.zg.values, sigma=10)
     
     # calculate displacement and rotation
-    rotation_matrix = np.identity(4)
-    velocity = [0, 0, 0]
+    # rotation_matrix = np.identity(4)
+    # velocity = [0, 0, 0]
 
-    for i in range(1, len(imu_df)):
-        v = imu_df.iloc[i].values
-        da = np.degrees([v[j + 4] * v[7] for j in range(3)])
+    # for i in range(1, len(imu_df)):
+    #     v = imu_df.iloc[i].values
+    #     da = np.degrees([v[j + 4] * v[7] for j in range(3)])
         
-        acceleration = imu_df.iloc[i, [1, 2, 3]].values
-        gravity_rotated = np.dot(rotation_matrix, np.array([*gravity, 1]))
-        acceleration = acceleration - gravity_rotated[:3]
+    #     acceleration = imu_df.iloc[i, [1, 2, 3]].values
+    #     gravity_rotated = np.dot(rotation_matrix, np.array([*gravity, 1]))
+    #     acceleration = acceleration - gravity_rotated[:3]
         
-        imu_df.iloc[i, 1] = acceleration[0]
-        imu_df.iloc[i, 2] = acceleration[1]
-        imu_df.iloc[i, 3] = acceleration[2]
-        
+    #     imu_df.iloc[i, 1] = acceleration[0]
+    #     imu_df.iloc[i, 2] = acceleration[1]
+    #     imu_df.iloc[i, 3] = acceleration[2]
+    
+    imu_df[["xa", "ya", "za"]] = imu_df[["xa", "ya", "za"]] - gravity
+    
     accel_mavg = imu_df[["xa", "ya", "za"]].rolling(window=win_len).mean()
     accel_mavg.fillna(0, inplace=True)
     imu_df[["xa", "ya", "za"]] = imu_df[["xa", "ya", "za"]] - accel_mavg
@@ -138,7 +140,7 @@ def m1(config: Config):
         source = copy.deepcopy(local_pcds[end_t])
         target = copy.deepcopy(local_pcds[start_t])
         
-        refined_transform = registration.icp_refinement(source, target, 0.05, trans_init=trans_mat, max_iteration=50, p2p=True).transformation
+        refined_transform = registration.icp_refinement(source, target, 0.05, trans_init=trans_mat, max_iteration=30, p2p=True).transformation
         
         velocity = refined_transform[:3, 3] * 1e3 / (sequence_ts[end_t] - sequence_ts[start_t])
         
@@ -171,7 +173,7 @@ def m1(config: Config):
     
     # registration.view(estimated_pcd, groundtruth_pcd, np.identity(4))
     
-    print(f"RMSE: {avg_distance_error}")
+    print(f"RMSE: {avg_distance_error:.3f} m")
     
 def m2(config):
     pose_file = os.path.join(config.get_groundtruth_dir(), f"{config.get_file_name()}.pose.npz")
@@ -312,7 +314,7 @@ def m2(config):
     gt_trajectory = helpers.make_pcd(trajectory_t[elapsed_time_inds[0]:elapsed_time_inds[end_imu_t], :3, 3])
     gt_trajectory.transform(helpers.inv_transform(trajectory_t[elapsed_time_inds[0]]))
     
-    open3d.visualization.draw_geometries([trajectory_complete, gt_trajectory])
+    # open3d.visualization.draw_geometries([trajectory_complete, gt_trajectory])
 
     timestamps = sequence_ts[elapsed_time_inds[0]:elapsed_time_inds[end_imu_t]]
     xyz = np.asarray(gt_trajectory.points)
@@ -320,10 +322,10 @@ def m2(config):
     gt_trajectory_df = pd.DataFrame(np.concatenate((timestamps.reshape(-1, 1), xyz), axis=1), columns=["timestamp", "x", "y", "z"])
     
     closest_timestamps = np.array([helpers.nearest(trajectory_df.timestamp.values, t) for t in gt_trajectory_df.timestamp.values], dtype=np.int64)
-    trajectory_df = trajectory_df[trajectory_df.timestamp.isin(closest_timestamps)].drop_duplicates()
+    trajectory_df = trajectory_df[trajectory_df.timestamp.isin(closest_timestamps)].drop_duplicates("timestamp")
     average_distance_error = np.mean(np.linalg.norm(trajectory_df[["x", "y", "z"]].values - gt_trajectory_df[["x", "y", "z"]].values, axis=1))
 
-    print(f"Average distance error: {average_distance_error}")
+    print(f"Average distance error: {average_distance_error:.3f} m")
 
     
 if __name__ == "__main__":
